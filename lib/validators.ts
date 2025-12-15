@@ -1,31 +1,22 @@
 import { z } from "zod";
+import { formatNumberWithDecimal } from "./utils";
 
-export const productValidator = z.object({
-  title: z.string().min(3, "El título debe tener al menos 3 caracteres"),
-  description: z
-    .string()
-    .min(10, "La descripción debe tener al menos 10 caracteres"),
-  price: z.number().min(0, "El precio debe ser un número positivo"),
-  slug: z
-    .string()
-    .min(3, "El slug debe tener al menos 3 caracteres")
-    .regex(
-      /^[a-z0-9-]+$/,
-      "El slug solo puede contener letras minúsculas, números y guiones"
-    ),
-  imageUrl: z.string().url("La URL de la imagen debe ser una URL válida"),
-  category: z.string().min(3, "La categoría debe tener al menos 3 caracteres"),
-  brand: z.string().min(2, "La marca debe tener al menos 2 caracteres"),
-  rating: z.number().min(0).max(5, "La calificación debe estar entre 0 y 5"),
-  numReviews: z
-    .number()
-    .min(0, "El número de reseñas debe ser un número positivo"),
-  stock: z.number().min(0, "El stock debe ser un número positivo"),
+export const insertProductSchema = z.object({
+  name: z.string().min(3, "name must be at least 3 chars"),
+  slug: z.string().min(3, "slug must be at least 3 chars"),
+  category: z.string().min(3, "category must be at least 3 chars"),
+  brand: z.string().min(3, "brand must be at least 3 chars"),
+  description: z.string().min(3, "description must be at least 3 chars"),
+  stock: z.coerce.number(),
+  images: z
+    .array(z.string())
+    .min(1, "Include at least 1 image for the product"),
   isFeatured: z.boolean(),
-  banner: z
-    .string()
-    .url("La URL del banner debe ser una URL válida")
-    .nullable(),
+  banner: z.string().nullable(),
+  price: z.string().refine((value) => {
+    const formatted = formatNumberWithDecimal(Number(value));
+    return /^\d+(\.\d{2})?$/.test(formatted);
+  }, { message: "price must be a number with two decimals, e.g. 12.34" }),
 });
 
-export type ProductInput = z.infer<typeof productValidator>;
+export type InsertProduct = z.infer<typeof insertProductSchema>;

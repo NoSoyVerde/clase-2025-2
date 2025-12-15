@@ -5,23 +5,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function convertToPlainObject<T>(data: T): T {
-  if (Array.isArray(data)) {
-    return data.map((item) => convertToPlainObject(item)) as T;
-  }
-  if (data && typeof data === "object") {
-    const plain: any = {};
-    for (const key in data) {
-      if (Object.prototype.hasOwnProperty.call(data, key)) {
-        const value = (data as any)[key];
-        if (value && typeof value === "object" && typeof value.toJSON === "function") {
-          plain[key] = value.toJSON();
-        } else {
-          plain[key] = convertToPlainObject(value);
-        }
-      }
-    }
-    return plain;
-  }
-  return data;
+export function convertToPlainObject<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value));
 }
+
+//Dar formato al campo precio
+export function formatNumberWithDecimal(num: number): string {
+  const [parte_entera, parte_decimal] = num.toString().split('.');
+  return parte_decimal
+    ? `${parte_entera}.${parte_decimal.padEnd(2, '0')}`
+    : `${parte_entera}.00`;
+}
+
