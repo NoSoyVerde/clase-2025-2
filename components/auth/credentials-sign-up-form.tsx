@@ -1,156 +1,216 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { registerWithCredentials } from "@/lib/auth-client";
+import React from "react";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { signUpDeafaultValues } from "@/lib/constants";
+import { authClient } from "@/lib/auth-client";
+import Link from "next/link";
 
-interface CredentialsSignUpFormProps {
-  callbackURL?: string;
-}
+export default function CredentialsSignUpForm() {
+  const [error, setError] = React.useState("");
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [acceptTerms, setAcceptTerms] = React.useState(false);
+  const [communicationMethod, setCommunicationMethod] = React.useState<"mail" | "phone">("mail");
 
-export function CredentialsSignUpForm({ callbackURL = "/" }: CredentialsSignUpFormProps) {
-  const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  async function handleSubmit(evt: React.FormEvent<HTMLFormElement>) {
+    evt.preventDefault();
     setError("");
 
-    // Validar contraseñas
+    const formData = new FormData(evt.currentTarget);
+    const name = String(formData.get("name"));
+    const email = String(formData.get("email"));
+    const phone = String(formData.get("phone") || "");
+    const password = String(formData.get("password"));
+    const confirmPassword = String(formData.get("confirmPassword"));
+
+    // Validaciones
+    if (!name || !password || !email) {
+      setError("Name, email and password are required");
+      return;
+    }
+
+    if (!acceptTerms) {
+      setError("You must agree to the terms and conditions");
+      return;
+    }
+
+    if (communicationMethod === "phone" && !phone) {
+      setError("Phone is required when phone communication is selected");
+      return;
+    }
+
     if (password !== confirmPassword) {
-      setError("Las contraseñas no coinciden");
+      setError("Passwords do not match");
       return;
     }
 
     if (password.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres");
+      setError("Password must be at least 8 characters");
       return;
     }
 
-    setIsLoading(true);
-
-    try {
-      const result = await registerWithCredentials(email, password, name, {
-        callbackURL,
-      });
-
-      if (result.error) {
-        setError(result.error.message || "Error al registrar usuario");
-      } else {
-        router.push(callbackURL);
-        router.refresh();
+    await authClient.signUp.email(
+      {
+        email,
+        password,
+        name,
+      },
+      {
+        onRequest: () => {
+          setIsLoading(true);
+        },
+        onSuccess: () => {
+          window.location.href = "/";
+        },
+        onError: (ctx) => {
+          setIsLoading(false);
+          setError(ctx.error.message || "Error registering user");
+        },
       }
-    } catch {
-      setError("Error al registrar. Inténtalo de nuevo.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    );
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/50 dark:text-red-400">
-          {error}
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-4">
+        {error && (
+          <div className="rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/50 dark:text-red-400">
+            {error}
+          </div>
+        )}
+
+        {/* Name */}
+        <div>
+          <Label htmlFor="name">Name</Label>
+          <Input
+            id="name"
+            name="name"
+            type="text"
+            defaultValue={signUpDeafaultValues.name}
+            placeholder="Your name"
+            required
+          />
         </div>
-      )}
 
-      <div>
-        <label
-          htmlFor="name"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-        >
-          Nombre
-        </label>
-        <input
-          id="name"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          autoComplete="name"
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-          placeholder="Tu nombre"
-        />
+        {/* Email */}
+        <div>
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            defaultValue={signUpDeafaultValues.email}
+            placeholder="you@example.com"
+            required
+          />
+        </div>
+
+        {/* Phone (optional) */}
+        <div>
+          <Label htmlFor="phone">
+            Phone{" "}
+            <span className="text-muted-foreground font-normal">
+              {communicationMethod === "phone" ? "(required)" : "(optional)"}
+            </span>
+          </Label>
+          <Input
+            id="phone"
+            name="phone"
+            type="tel"
+            placeholder="123456789"
+            required={communicationMethod === "phone"}
+          />
+        </div>
+
+        {/* Password */}
+        <div>
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            defaultValue={signUpDeafaultValues.password}
+            placeholder="••••••••"
+            required
+          />
+        </div>
+
+        {/* Confirm Password */}
+        <div>
+          <Label htmlFor="confirmPassword">Confirm Password</Label>
+          <Input
+            id="confirmPassword"
+            name="confirmPassword"
+            type="password"
+            defaultValue={signUpDeafaultValues.confirmPassword}
+            placeholder="••••••••"
+            required
+          />
+        </div>
+
+        {/* Terms and Conditions */}
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="terms"
+            checked={acceptTerms}
+            onChange={(e) => setAcceptTerms(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+          />
+          <Label htmlFor="terms" className="text-sm font-normal cursor-pointer">
+            I agree to the{" "}
+            <Link href="/terms" className="text-primary hover:underline">
+              terms and conditions
+            </Link>
+          </Label>
+        </div>
+
+        {/* Communication Method */}
+        <div className="space-y-2">
+          <Label>How do you want to receive communications?</Label>
+          <div className="flex items-center space-x-4">
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="radio"
+                name="communication"
+                value="mail"
+                checked={communicationMethod === "mail"}
+                onChange={() => setCommunicationMethod("mail")}
+                className="h-4 w-4 text-primary focus:ring-primary"
+              />
+              <span className="text-sm">Mail</span>
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="radio"
+                name="communication"
+                value="phone"
+                checked={communicationMethod === "phone"}
+                onChange={() => setCommunicationMethod("phone")}
+                className="h-4 w-4 text-primary focus:ring-primary"
+              />
+              <span className="text-sm">Phone</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? "Signing up..." : "Sign Up"}
+        </Button>
+
+        {/* Link to Sign In */}
+        <p className="text-center text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Link href="/sign-in" className="text-primary hover:underline">
+            Sign in
+          </Link>
+        </p>
       </div>
-
-      <div>
-        <label
-          htmlFor="email"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-        >
-          Email
-        </label>
-        <input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          autoComplete="email"
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-          placeholder="tu@email.com"
-        />
-      </div>
-
-      <div>
-        <label
-          htmlFor="password"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-        >
-          Contraseña
-        </label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          autoComplete="new-password"
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-          placeholder="••••••••"
-        />
-      </div>
-
-      <div>
-        <label
-          htmlFor="confirmPassword"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-        >
-          Confirmar Contraseña
-        </label>
-        <input
-          id="confirmPassword"
-          type="password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          required
-          autoComplete="new-password"
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-          placeholder="••••••••"
-        />
-      </div>
-
-      <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? "Registrando..." : "Crear Cuenta"}
-      </Button>
-
-      <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-        ¿Ya tienes cuenta?{" "}
-        <Link
-          href="/sign-in"
-          className="font-medium text-primary hover:underline"
-        >
-          Inicia sesión
-        </Link>
-      </p>
     </form>
   );
 }
+
+export { CredentialsSignUpForm };

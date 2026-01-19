@@ -6,11 +6,15 @@ const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
 });
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+const globalForPrisma = global as unknown as { prisma: PrismaClient, prismaBase: PrismaClient };
 
-export const prisma = globalForPrisma.prisma || new PrismaClient({ 
+// Cliente base para better-auth (sin extensiones)
+export const prismaBase = globalForPrisma.prismaBase || new PrismaClient({ 
   adapter 
-}).$extends({
+});
+
+// Cliente extendido para el resto de la app
+export const prisma = globalForPrisma.prisma || prismaBase.$extends({
   result: {
     product: {
       price: {

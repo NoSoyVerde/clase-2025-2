@@ -1,3 +1,2 @@
-// Exportar todos los componentes de autenticación
-export { CredentialsSignInForm } from "./credentials-sign-in-form";
-export { CredentialsSignUpForm } from "./credentials-sign-up-form";
+export { default as CredentialsSignInForm, CredentialsSignInForm as SignInForm } from "./credentials-sign-in-form";
+export { default as CredentialsSignUpForm, CredentialsSignUpForm as SignUpForm } from "./credentials-sign-up-form";
